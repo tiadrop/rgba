@@ -1,0 +1,16 @@
+{
+  "name": "@xtia/rgba",
+  "version": "1.0.0",
+  "main": "lib/index.js",
+  "repository": {
+    "url": "https://github.com/tiadrop/rgba",
+    "type": "github"
+  },
+  "scripts": {
+    "prepublishOnly": "cp ../README.md .",
+    "postpublish": "rm README.md"
+  },
+  "description": "Colour representation and manipulation",
+  "author": "Aleta Lovelace",
+  "license": "MIT"
+}

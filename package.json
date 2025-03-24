@@ -1,0 +1,21 @@
+{
+  "name": "rgba",
+  "version": "1.0.0",
+  "description": "Colour representation and manipulation",
+  "main": "lib/index.ts",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "build": "npx tsc"
+  },
+  "keywords": [
+    "colour",
+    "color"
+  ],
+  "author": "Aleta",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}
