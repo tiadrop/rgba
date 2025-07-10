@@ -107,6 +107,19 @@ export class RGBA {
     }
 
     /**
+     * Returns a new RGBA by inverting each channel
+     * @returns Inverted colour
+     */
+    invert() {
+        return new RGBA(
+            255 - this.redValue,
+            255 - this.greenValue,
+            255 - this.blueValue,
+            this.alphaValue
+        )
+    }
+
+    /**
      * Returns a new RGBA by blending an instance with another
      * @param target 
      * @param targetBias Specifies how close to the target colour the result will be (0..1, default .5)
