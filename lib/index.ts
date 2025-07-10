@@ -23,8 +23,8 @@ export class RGBA {
         return "#" + [
             ...(
                 this.asBytes[3] == 255
-                    ? this.asBytes
-                    : this.asBytes.slice(0, 3)
+                    ? this.asBytes.slice(0, 3)
+                    : this.asBytes
             )
         ].map(n => n.toString(16).padStart(2, "0")).join("");
     }
