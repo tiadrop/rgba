@@ -11,7 +11,9 @@
   },
   "keywords": [
     "colour",
-    "color"
+    "color",
+    "rgb",
+    "rgba"
   ],
   "author": "Aleta",
   "license": "MIT",

@@ -22,5 +22,5 @@ document.body.style.backgroundColor = darkRed.hexCode;
 const colour = new RGBA(imageData.data.slice(idx, idx + 4));
 
 // write to canvas
-imageData.data.set(colour.asBytes, idx);
+imageData.data.set(colour.data, idx);
 ```
