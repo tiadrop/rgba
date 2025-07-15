@@ -1,5 +1,5 @@
 export class RGBA {
-    readonly data: Uint8ClampedArray;
+    readonly asBytes: Uint8ClampedArray;
 
     /**
      * Create a RGBA instance from individual channel values
@@ -16,10 +16,10 @@ export class RGBA {
     constructor(bytes: Uint8Array | Uint8ClampedArray)
     constructor(redOrValues: number | Uint8Array | Uint8ClampedArray, green: number = 0, blue: number = 0, alpha: number = 255) {
         if (typeof redOrValues == "number") {
-            this.data = new Uint8ClampedArray([redOrValues, green, blue, alpha]);
+            this.asBytes = new Uint8ClampedArray([redOrValues, green, blue, alpha]);
         } else {
             if (redOrValues.length !== 4) throw new Error("Invalid colour data; typed arrays must contain 4 values");
-            this.data = redOrValues instanceof Uint8ClampedArray
+            this.asBytes = redOrValues instanceof Uint8ClampedArray
                 ? redOrValues
                 : new Uint8ClampedArray(redOrValues);
         }
@@ -28,19 +28,19 @@ export class RGBA {
     /**
      * Read the Red channel (0..255)
      */
-    get redValue(){ return this.data[0] }
+    get redValue(){ return this.asBytes[0] }
     /**
      * Read the Green channel (0..255)
      */
-    get greenValue(){ return this.data[1] }
+    get greenValue(){ return this.asBytes[1] }
     /**
      * Read the Blue channel (0..255)
      */
-    get blueValue(){ return this.data[2] }
+    get blueValue(){ return this.asBytes[2] }
     /**
      * Read the Alpha channel (0..255)
      */
-    get alphaValue(){ return this.data[3] }
+    get alphaValue(){ return this.asBytes[3] }
 
     /**
      * Gets the hex code in the format #rrggbb (or #rrggbbaa where appropriate)
@@ -48,9 +48,9 @@ export class RGBA {
     get hexCode(): string {
         return "#" + [
             ...(
-                this.data[3] == 255
-                    ? this.data.slice(0, 3)
-                    : this.data
+                this.asBytes[3] == 255
+                    ? this.asBytes.slice(0, 3)
+                    : this.asBytes
             )
         ].map(n => n.toString(16).padStart(2, "0")).join("");
     }
