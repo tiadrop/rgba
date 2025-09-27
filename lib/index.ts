@@ -239,11 +239,14 @@ export class RGBA {
 
 	/**
 	 * Returns a new RGBA by blending an instance with another
-	 * @param target
+	 * @param target RGBA instance or `parse()`-compatible string
 	 * @param targetBias Specifies how close to the target colour the result will be (0..1, default .5)
 	 * @returns Blended RGBA colour
 	 */
-	blend(target: RGBA, targetBias: number = 0.5) {
+	blend(target: RGBA, targetBias?: number): RGBA
+	blend(target: string, targetBias?: number): RGBA
+	blend(target: RGBA | string, targetBias: number = 0.5): RGBA {
+		if (typeof target == "string") target = RGBA.parse(target);
 		if (targetBias == 0) return this;
 		if (targetBias == 1) return target;
 		return new RGBA(
