@@ -295,7 +295,9 @@ export class RGBA {
 	/**
 	 * Creates a colour representation using a CSS colour string
 	 *
-	 * Supports `#<hex>`, `rgb(r, g, b)` and `rgba(r, g, b, a)`
+	 * Supports `#<hex>`, `rgb(r, g, b)`, `rgba(r, g, b, a)` and `hsl(h, s%, l%)`
+	 * 
+	 * Hex values may be #rgb, #rrggbb, #rgba, #rrggbbaa, #w or #ww
 	 * @param cssValue
 	 * @returns
 	 */
@@ -305,9 +307,8 @@ export class RGBA {
 		// css func?
 		const funcMatch = cssValue.match(cssFuncRegex);
 		if (!funcMatch) throw new Error("Unrecognised CSS colour string");
-		// css func.
+		// func name match
 		const funcName = funcMatch[1] as keyof typeof cssFuncs;
-		const argStr = funcMatch[2];
 		const args = parseArgStr(funcMatch[2]);
 		if (!(funcName in cssFuncs)) throw new Error("Unknown CSS colour function");
 		const func = cssFuncs[funcName];
@@ -324,7 +325,7 @@ export class RGBA {
 			const arg = args[i];
 			const validator = Array.isArray(overload.params)
 				? overload.params[i]
-				: validateByteOrPercent;
+				: validateNumberOrPercent;
 			const result = validator(arg);
 			if (!result.valid) {
 				throw new Error("Invalid CSS colour argument: " + result.reason);
@@ -405,7 +406,7 @@ type CssFunc = {
 	parse: (args: string[]) => RGBA;
 }[];
 
-const validateByteOrPercent = (v: string) => {
+const validateNumberOrPercent = (v: string) => {
 	if (v[v.length - 1] == "%") {
 		return isNaN(v.replace(/%$/, "") as any)
 			? validationResult(false, "not a number")
@@ -488,8 +489,8 @@ const cssFuncs = {
 		{
 			params: [
 				validateAngle,
-				validateByteOrPercent,
-				validateByteOrPercent,
+				validateNumberOrPercent,
+				validateNumberOrPercent,
 			],
 			parse: ([h, s, l]) => RGBA.fromHSL(
 				stringToAngle(h),
@@ -500,15 +501,15 @@ const cssFuncs = {
 		{
 			params: [
 				validateAngle,
-				validateByteOrPercent,
-				validateByteOrPercent,
-				validateByteOrPercent,
+				validateNumberOrPercent,
+				validateNumberOrPercent,
+				validateNumberOrPercent,
 			],
 			parse: ([h, s, l, a]) => RGBA.fromHSL(
 				stringToAngle(h),
 				percentToValue(s),
 				percentToValue(l),
-				percentToValue(a) * 255
+				percentToValue(a)
 			)
 		},
 	],
@@ -517,15 +518,15 @@ const cssFuncs = {
 		{
 			params: [
 				validateAngle,
-				validateByteOrPercent,
-				validateByteOrPercent,
-				validateByteOrPercent,
+				validateNumberOrPercent,
+				validateNumberOrPercent,
+				validateNumberOrPercent,
 			],
 			parse: ([h, s, l, a]) => RGBA.fromHSL(
 				stringToAngle(h),
 				percentToValue(s),
 				percentToValue(l),
-				percentToValue(a) * 255
+				percentToValue(a)
 			)
 		},
 	]
