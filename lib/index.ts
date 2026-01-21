@@ -18,19 +18,19 @@ export class RGBA {
 		redOrValues: number | Uint8Array | Uint8ClampedArray,
 		green: number = 0,
 		blue: number = 0,
-		alpha: number = 255
+		alpha: number = 255,
 	) {
 		if (typeof redOrValues == "number") {
 			this.asBytes = new Uint8ClampedArray([redOrValues, green, blue, alpha]);
 		} else {
 			if (redOrValues.length !== 4)
 				throw new Error(
-					"Invalid colour data; typed arrays must contain 4 values"
+					"Invalid colour data; typed arrays must contain 4 values",
 				);
 			this.asBytes =
-				redOrValues instanceof Uint8ClampedArray
-					? redOrValues
-					: new Uint8ClampedArray(redOrValues);
+				redOrValues instanceof Uint8ClampedArray ? redOrValues : (
+					new Uint8ClampedArray(redOrValues)
+				);
 		}
 	}
 
@@ -60,7 +60,7 @@ export class RGBA {
 	}
 
 	/**
-	 * Gets the hex code in the format #rrggbb (or #rrggbbaa where appropriate)
+	 * Gets the colour's hex code in the format #rrggbb[aa]
 	 */
 	get hexCode(): string {
 		return (
@@ -85,49 +85,7 @@ export class RGBA {
 			this.redValue,
 			this.greenValue,
 			this.blueValue,
-			this.alphaValue * alpha
-		);
-	}
-
-	/**
-	 * Returns a new RGBA by applying binary xor to RGB channels. The original (called object's) alpha will be retained and the result will be blended by secondary colour's alpha
-	 * @param c
-	 * @returns Result of XOR'd colour channels
-	 */
-	xor(c: RGBA) {
-		return this.blend(
-			new RGBA(
-				this.redValue ^ c.redValue,
-				this.greenValue ^ c.greenValue,
-				this.blueValue ^ c.blueValue,
-				this.alphaValue
-			),
-			c.alphaValue / 255
-		);
-	}
-
-	/**
-	 * Returns a new RGBA by adding RGB channels. The original (called object's) alpha will be retained and the result will be blended by secondary colour's alpha
-	 * @param c
-	 * @returns Result of adding colour channels
-	 */
-	add(c: RGBA) {
-		const a = c.alphaValue / 255;
-		return new RGBA(
-			this.redValue + c.redValue * a,
-			this.greenValue + c.greenValue * a,
-			this.blueValue + c.blueValue * a,
-			this.alphaValue
-		);
-	}
-
-	apply(c: RGBA) {
-		const a = c.alphaValue / 255;
-		return new RGBA(
-			blendNumbers(this.redValue, c.redValue, a),
-			blendNumbers(this.greenValue, c.greenValue, a),
-			blendNumbers(this.blueValue, c.blueValue, a),
-			blendNumbers(this.alphaValue, 255, a)
+			this.alphaValue * alpha,
 		);
 	}
 
@@ -138,7 +96,7 @@ export class RGBA {
 		const [r, g, b] = [
 			this.redValue / 255,
 			this.greenValue / 255,
-			this.blueValue / 255
+			this.blueValue / 255,
 		];
 		return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 	}
@@ -159,7 +117,7 @@ export class RGBA {
 		const [r, g, b] = [
 			this.redValue / 255,
 			this.greenValue / 255,
-			this.blueValue / 255
+			this.blueValue / 255,
 		];
 		let angle = 0;
 		if (r > g && r > b) angle = (g - b) / (r - Math.min(g, b));
@@ -176,7 +134,7 @@ export class RGBA {
 		const [r, g, b] = [
 			this.redValue / 255,
 			this.greenValue / 255,
-			this.blueValue / 255
+			this.blueValue / 255,
 		];
 		const max = Math.max(r, g, b);
 		const min = Math.min(r, g, b);
@@ -185,8 +143,8 @@ export class RGBA {
 		return chroma / (1 - Math.abs(this.lightness * 2 - 1));
 	}
 
-	contrast(n: number) {
-		return new RGBA(this.asBytes.map(channel => channel * n));
+	applyContrast(n: number) {
+		return new RGBA(this.asBytes.map((channel) => channel * n));
 	}
 
 	saturate(amount: number) {
@@ -195,20 +153,17 @@ export class RGBA {
 		return greyscale.blend(this, amount);
 	}
 
-	shiftHue(angleDelta: Angle): RGBA
-	shiftHue(angleDeltaRadians: number): RGBA
+	shiftHue(angleDelta: Angle): RGBA;
+	shiftHue(angleDeltaRadians: number): RGBA;
 	shiftHue(delta: Angle | number): RGBA {
-		const deltaRadians = typeof delta == "number"
-			? delta
-			: (angleAsDegrees(delta) * (Math.PI / 180));
-		const hue = this.hue + deltaRadians;
+		const deltaRadians = angleAsRadians(delta);
 		return RGBA.fromHSL(
 			this.hue + deltaRadians,
 			this.saturation,
 			this.lightness,
-			this.alphaValue
-		)
-	}	
+			this.alphaValue,
+		);
+	}
 
 	/**
 	 * Compares two RGBA instances and returns `true` if the represented colours are identical
@@ -224,16 +179,31 @@ export class RGBA {
 		);
 	}
 
-	/**
-	 * Returns a new RGBA by inverting R, G and B channels, leaving A unchanged
-	 * @returns Inverted colour
-	 */
-	invert() {
+	private _inverted: RGBA | null = null;
+
+	get inverted(): RGBA {
+		if (!this._inverted) {
+			this._inverted = new RGBA(
+				255 - this.redValue,
+				255 - this.greenValue,
+				255 - this.blueValue,
+				this.alphaValue,
+			);
+		}
+		return this._inverted;
+	}
+
+	replace(channels: {
+		red?: number;
+		green?: number;
+		blue?: number;
+		alpha?: number;
+	}) {
 		return new RGBA(
-			255 - this.redValue,
-			255 - this.greenValue,
-			255 - this.blueValue,
-			this.alphaValue
+			channels.red ?? this.redValue,
+			channels.green ?? this.greenValue,
+			channels.blue ?? this.blueValue,
+			channels.alpha ?? this.alphaValue,
 		);
 	}
 
@@ -243,8 +213,8 @@ export class RGBA {
 	 * @param targetBias Specifies how close to the target colour the result will be (0..1, default .5)
 	 * @returns Blended RGBA colour
 	 */
-	blend(target: RGBA, targetBias?: number): RGBA
-	blend(target: string, targetBias?: number): RGBA
+	blend(target: RGBA, targetBias?: number): RGBA;
+	blend(target: string, targetBias?: number): RGBA;
 	blend(target: RGBA | string, targetBias: number = 0.5): RGBA {
 		if (typeof target == "string") target = RGBA.parse(target);
 		if (targetBias == 0) return this;
@@ -253,8 +223,232 @@ export class RGBA {
 			blendNumbers(this.redValue, target.redValue, targetBias),
 			blendNumbers(this.greenValue, target.greenValue, targetBias),
 			blendNumbers(this.blueValue, target.blueValue, targetBias),
-			blendNumbers(this.alphaValue, target.alphaValue, targetBias)
+			blendNumbers(this.alphaValue, target.alphaValue, targetBias),
 		);
+	}
+
+	private _floats: null | {
+		red: number;
+		green: number;
+		blue: number;
+		alpha: number;
+	} = null;
+	get asFloats() {
+		if (!this._floats)
+			this._floats = {
+				red: this.redValue / 255,
+				green: this.greenValue / 255,
+				blue: this.blueValue / 255,
+				alpha: this.alphaValue / 255,
+			};
+		return this._floats;
+	}
+
+	private _linear: { red: number; green: number; blue: number } | null = null;
+	get linearRGB() {
+		if (!this._linear) {
+			const { red, green, blue } = this.asFloats;
+			this._linear = {
+				red:
+					red <= 0.04045 ? red / 12.92 : Math.pow((red + 0.055) / 1.055, 2.4),
+				green:
+					green <= 0.04045 ?
+						green / 12.92
+					:	Math.pow((green + 0.055) / 1.055, 2.4),
+				blue:
+					blue <= 0.04045 ?
+						blue / 12.92
+					:	Math.pow((blue + 0.055) / 1.055, 2.4),
+			};
+		}
+		return this._linear;
+	}
+
+	private _vec3: { x: number; y: number; z: number } | null = null;
+	get asVec3() {
+		if (!this._vec3) {
+			const linear = this.linearRGB;
+			const x =
+				linear.red * 0.4124564 +
+				linear.green * 0.3575761 +
+				linear.blue * 0.1804375;
+			const y =
+				linear.red * 0.2126729 +
+				linear.green * 0.7151522 +
+				linear.blue * 0.072175;
+			const z =
+				linear.red * 0.0193339 +
+				linear.green * 0.119192 +
+				linear.blue * 0.9503041;
+			this._vec3 = { x, y, z };
+		}
+		return this._vec3;
+	}
+
+	private _lab: { l: number; a: number; b: number } | null = null;
+	get asLAB() {
+		if (!this._lab) {
+			const { x, y, z } = this.asVec3;
+
+			const refX = 0.95047;
+			const refY = 1.0;
+			const refZ = 1.08883;
+
+			const fx = x / refX;
+			const fy = y / refY;
+			const fz = z / refZ;
+
+			const epsilon = 0.008856; // 216/24389
+			const kappa = 903.3;
+
+			const f = (t: number) =>
+				t > epsilon ? Math.cbrt(t) : (kappa * t + 16) / 116;
+
+			const l = fy > epsilon ? 116 * f(fy) - 16 : kappa * fy;
+			const a = 500 * (f(fx) - f(fy));
+			const b = 200 * (f(fy) - f(fz));
+
+			this._lab = { l, a, b };
+		}
+		return this._lab;
+	}
+
+	private transformChannelsFloat(
+		target: RGBA,
+		fn: (self: number, target: number) => number,
+	) {
+		const floatSelf = this.asFloats;
+		const floatTarget = target.asFloats;
+		return this.blend(
+			new RGBA(
+				fn(floatSelf.red, floatTarget.red) * 255,
+				fn(floatSelf.green, floatTarget.green) * 255,
+				fn(floatSelf.blue, floatTarget.blue) * 255,
+				this.alphaValue,
+			),
+			target.alphaValue / 255,
+		);
+	}
+
+	private transformChannelsByte(
+		target: RGBA,
+		fn: (self: number, target: number) => number,
+	) {
+		return this.blend(
+			new RGBA(
+				fn(this.redValue, target.redValue),
+				fn(this.greenValue, target.greenValue),
+				fn(this.blueValue, target.blueValue),
+				this.alphaValue,
+			),
+			target.alphaValue / 255,
+		);
+	}
+
+	apply(
+		c: RGBA,
+		mode:
+			| "draw"
+			| "multiply"
+			| "screen"
+			| "overlay"
+			| "difference"
+			| "xor"
+			| "add"
+			| "exclusion" = "draw",
+	) {
+		switch (mode) {
+			case "draw":
+				const a = c.alphaValue / 255;
+				return new RGBA(
+					blendNumbers(this.redValue, c.redValue, a),
+					blendNumbers(this.greenValue, c.greenValue, a),
+					blendNumbers(this.blueValue, c.blueValue, a),
+					blendNumbers(this.alphaValue, 255, a),
+				);
+			case "multiply":
+				return this.transformChannelsFloat(c, (a, b) => a * b);
+			case "screen":
+				return this.transformChannelsFloat(c, (a, b) => 1 - (1 - a) * (1 - b));
+			case "overlay":
+				return this.transformChannelsFloat(c, (a, b) =>
+					a < 0.5 ? 2 * a * b : 1 - 2 * (1 - a) * (1 - b),
+				);
+			case "difference":
+				return this.transformChannelsByte(c, (a, b) => Math.abs(a - b));
+			case "exclusion":
+				return this.transformChannelsFloat(c, (a, b) => a + b - 2 * a * b);
+			case "add":
+				return this.transformChannelsByte(c, (a, b) => a + b);
+			case "xor":
+				return this.transformChannelsByte(c, (a, b) => a ^ b);
+			default:
+				throw new Error(`Unsupported blend mode '${mode}'`);
+		}
+	}
+
+	/**
+	 * Perform XOR operation
+	 * @param other
+	 * @returns XOR'd colour
+	 * @deprecated use `rgba.apply(other, "xor")`
+	 */
+	xor(other: RGBA) {
+		return this.apply(other, "xor");
+	}
+	
+	/**
+	 * Perform ADd operation
+	 * @param other
+	 * @returns Added colour
+	 * @deprecated use `rgba.apply(other, "add")`
+	 */
+	add(other: RGBA) {
+		return this.apply(other, "add");
+	}
+
+	distance(target: RGBA, metric: "euclidean" | "cie76" = "euclidean") {
+		switch (metric) {
+			case "euclidean": {
+				const dr = this.redValue - target.redValue;
+				const dg = this.greenValue - target.greenValue;
+				const db = this.blueValue - target.blueValue;
+				const da = this.alphaValue - target.alphaValue;
+				return Math.sqrt(dr * dr + dg * dg + db * db + da * da);
+			}
+			case "cie76": {
+				const lab1 = this.asLAB;
+				const lab2 = target.asLAB;
+				const dl = lab1.l - lab2.l;
+				const da = lab1.a - lab2.a;
+				const db = lab1.b - lab2.b;
+				return Math.sqrt(dl * dl + da * da + db * db);
+			}
+			default:
+				throw new Error(`Unsupported metric: ${metric}`);
+		}
+	}
+
+	/**
+	 * Find the perceptually nearest colour in a palette
+	 * @param palette Array of RGBA colours to search
+	 * @param metric Distance metric (default: 'euclidean')
+	 * @returns The nearest colour from the palette
+	 */
+	nearest(palette: RGBA[], metric: "euclidean" | "cie76" = "euclidean"): RGBA {
+		if (palette.length === 0) {
+			throw new Error("Cannot find nearest color in empty palette");
+		}
+
+		return palette.reduce(
+			(nearest, current) => {
+				const distance = this.distance(current, metric);
+				return distance < nearest.distance ?
+						{ color: current, distance }
+					:	nearest;
+			},
+			{ color: palette[0], distance: this.distance(palette[0], metric) },
+		).color;
 	}
 
 	/**
@@ -269,44 +463,22 @@ export class RGBA {
 	 * @deprecated use RGBA.parse(code with # prefix)
 	 */
 	static fromHex(code: string) {
-		// remove when private vv (exposed path removes #)
 		if (code[0] == "#") code = code.substring(1);
-		if (
-			code.length < 1 ||
-			code.length > 8 ||
-			code.length == 5 ||
-			code.length == 7 ||
-			/[^a-zA-Z\d]/.test(code)
-		)
-			throw new Error(`Invalid hex colour code '${code}'`);
-
-		if (code.length < 3) code = code + code + code; // 1 => 111, 12 => 121212
-		if (code.length <= 4) {
-			// 123 => 112233, 1234 => 11223344
-			code = code
-				.split("")
-				.map((c) => c + c)
-				.join("");
-		}
-		const red = parseInt(code[0] + code[1], 16);
-		const green = parseInt(code[2] + code[3], 16);
-		const blue = parseInt(code[4] + code[5], 16);
-		const alpha = code.length == 6 ? 255 : parseInt(code[6] + code[7], 16);
-		return new RGBA(red, green, blue, alpha);
+		return fromHex(code);
 	}
 
 	/**
 	 * Creates a colour representation using a CSS colour string
 	 *
 	 * Supports `#<hex>`, `rgb(r, g, b)`, `rgba(r, g, b, a)` and `hsl(h, s%, l%)`
-	 * 
+	 *
 	 * Hex values may be #rgb, #rrggbb, #rgba, #rrggbbaa, #w or #ww
 	 * @param cssValue
 	 * @returns
 	 */
 	static parse(cssValue: string) {
 		// #<hex>
-		if (cssValue[0] == "#") return RGBA.fromHex(cssValue.substring(1));
+		if (cssValue[0] == "#") return fromHex(cssValue.substring(1));
 		// css func?
 		const funcMatch = cssValue.match(cssFuncRegex);
 		if (!funcMatch) throw new Error("Unrecognised CSS colour string");
@@ -317,18 +489,20 @@ export class RGBA {
 		const func = cssFuncs[funcName];
 
 		// find a signature with matching arg count
-		const overload = func.find(f => {
+		const overload = func.find((f) => {
 			const numParams = Array.isArray(f.params) ? f.params.length : f.params;
 			return numParams === args.length;
 		});
-		if (!overload) throw new Error("Invalid CSS colour function argument count");
+		if (!overload)
+			throw new Error("Invalid CSS colour function argument count");
 
 		// validate args
 		for (let i = 0; i < args.length; i++) {
 			const arg = args[i];
-			const validator = Array.isArray(overload.params)
-				? overload.params[i]
-				: validateNumberOrPercent;
+			const validator =
+				Array.isArray(overload.params) ?
+					overload.params[i]
+				:	validateNumberOrPercent;
 			const result = validator(arg);
 			if (!result.valid) {
 				throw new Error("Invalid CSS colour argument: " + result.reason);
@@ -337,22 +511,32 @@ export class RGBA {
 		try {
 			return overload.parse(args);
 		} catch (e: any) {
-			const message = (typeof e == "object" && "message" in e) ? e.message : `${e}`;
+			const message =
+				typeof e == "object" && "message" in e ? e.message : `${e}`;
 			throw new Error("Failed to parse CSS colour: " + message);
 		}
 	}
 
-	static fromHSL(angle: Angle, saturation: number, lightness: number, alpha?: number): RGBA;
-	static fromHSL(radians: number, saturation: number, lightness: number, alpha?: number): RGBA;
+	static fromHSL(
+		angle: Angle,
+		saturation: number,
+		lightness: number,
+		alpha?: number,
+	): RGBA;
+	static fromHSL(
+		radians: number,
+		saturation: number,
+		lightness: number,
+		alpha?: number,
+	): RGBA;
 	static fromHSL(
 		hue: number | Angle,
 		saturation: number,
 		lightness: number,
-		alpha: number = 1
+		alpha: number = 1,
 	): RGBA {
-		const hueDeg = (typeof hue == "number"
-			? ((hue * 180 / Math.PI) % 360 + 360)
-			: angleAsDegrees(hue)) % 360;
+		const hueRadians = angleAsRadians(hue);
+		const hueDeg = (hueRadians * (180 / Math.PI)) % 360;
 
 		if (saturation === 0) {
 			const v = lightness * 255;
@@ -364,13 +548,15 @@ export class RGBA {
 		const x = chroma * (1 - Math.abs((hPrime % 2) - 1));
 		const m = lightness - chroma / 2;
 
-		let r1 = 0, g1 = 0, b1 = 0;
+		let r1 = 0,
+			g1 = 0,
+			b1 = 0;
 		if (hPrime < 1) [r1, g1, b1] = [chroma, x, 0];
 		else if (hPrime < 2) [r1, g1, b1] = [x, chroma, 0];
 		else if (hPrime < 3) [r1, g1, b1] = [0, chroma, x];
 		else if (hPrime < 4) [r1, g1, b1] = [0, x, chroma];
 		else if (hPrime < 5) [r1, g1, b1] = [x, 0, chroma];
-		else[r1, g1, b1] = [chroma, 0, x];
+		else [r1, g1, b1] = [chroma, 0, x];
 
 		const r = (r1 + m) * 255;
 		const g = (g1 + m) * 255;
@@ -380,67 +566,104 @@ export class RGBA {
 		return new RGBA(r, g, b, a);
 	}
 
+	static average(colours: RGBA[]) {
+		const channels = colours
+			.reduce(
+				([sr, sg, sb, sa], c) => [
+					c.redValue + sr,
+					c.greenValue + sg,
+					c.blueValue + sb,
+					c.alphaValue + sa,
+				],
+				[0, 0, 0, 0],
+			)
+			.map((n) => n / colours.length) as [number, number, number, number];
+		return new RGBA(...channels);
+	}
 
-	// may slow-deprecate in future if exported colour consts prove useful
+	/**
+	 * @deprecated - use exported colours, eg `import { black } from "@xtia/rgba"
+	 */
 	static black = new RGBA(0, 0, 0);
+	/**
+	 * @deprecated - use exported colours, eg `import { blue } from "@xtia/rgba"
+	 */
 	static blue = new RGBA(0, 0, 255);
+	/**
+	 * @deprecated - use exported colours, eg `import { green } from "@xtia/rgba"
+	 */
 	static green = new RGBA(0, 255, 0);
+	/**
+	 * @deprecated - use exported colours, eg `import { cyan } from "@xtia/rgba"
+	 */
 	static cyan = new RGBA(0, 255, 255);
+	/**
+	 * @deprecated - use exported colours, eg `import { red } from "@xtia/rgba"
+	 */
 	static red = new RGBA(255, 0, 0);
+	/**
+	 * @deprecated - use exported colours, eg `import { magenta } from "@xtia/rgba"
+	 */
 	static magenta = new RGBA(255, 0, 255);
+	/**
+	 * @deprecated - use exported colours, eg `import { yellow } from "@xtia/rgba"
+	 */
 	static yellow = new RGBA(255, 255, 0);
+	/**
+	 * @deprecated - use exported colours, eg `import { white } from "@xtia/rgba"
+	 */
 	static white = new RGBA(255, 255, 255);
 }
 
+const TAU = Math.PI * 2;
 const cssFuncRegex = /^\s*(\w+)\(([^)]+)\)\s*$/;
 
 function parseArgStr(s: string) {
 	if (s.includes(",")) return s.split(",").map((s) => s.trim());
-	const [beforeSlash, afterSlash] = s.split("/", 2).map(s => s.trim());
-	if (afterSlash) return [
-		...beforeSlash.split(/\s+/),
-		afterSlash
-	];
+	const [beforeSlash, afterSlash] = s.split("/", 2).map((s) => s.trim());
+	if (afterSlash) return [...beforeSlash.split(/\s+/), afterSlash];
 	return beforeSlash.split(/\s+/);
 }
 
 type CssFunc = {
-	params: (((value: string) => ArgumentValidationResult)[]) | number;
+	params: ((value: string) => ArgumentValidationResult)[] | number;
 	parse: (args: string[]) => RGBA;
 }[];
 
 const validateNumberOrPercent = (v: string) => {
 	if (v[v.length - 1] == "%") {
-		return isNaN(v.replace(/%$/, "") as any)
-			? validationResult(false, "not a number")
-			: validationResult(true);
+		return isNaN(v.replace(/%$/, "") as any) ?
+				validationResult(false, "not a number")
+			:	validationResult(true);
 	}
-	return isNaN(v as any)
-		? validationResult(false, "not a number")
-		: validationResult(true);
+	return isNaN(v as any) ?
+			validationResult(false, "not a number")
+		:	validationResult(true);
 };
 
 const validateAngle = (v: string) => {
-	return /^\d+(deg|rad|turn)?$/.test(v) ? validationResult(true) : validationResult(false, "not a valid angle");
-}
+	return /^\d+(deg|rad|turn)?$/.test(v) ?
+			validationResult(true)
+		:	validationResult(false, "not a valid angle");
+};
 
 type ArgumentValidationResult =
-	{
-		valid: true;
-	}
 	| {
-		valid: false;
-		reason: string;
-	};
+			valid: true;
+	  }
+	| {
+			valid: false;
+			reason: string;
+	  };
 
 function validationResult(valid: true): ArgumentValidationResult;
 function validationResult(
 	valid: false,
-	reason: string
+	reason: string,
 ): ArgumentValidationResult;
 function validationResult(
 	valid: boolean,
-	reason: string = ""
+	reason: string = "",
 ): ArgumentValidationResult {
 	return { valid, reason };
 }
@@ -464,17 +687,17 @@ const cssFuncs = {
 			parse: ([r, g, b]) =>
 				new RGBA(percentToByte(r), percentToByte(g), percentToByte(b)),
 		},
-		{ // css rgb() accepts 4th alpha arg
+		{
+			// css rgb() accepts 4th alpha arg
 			params: 4,
 			parse: ([r, g, b, a]) =>
 				new RGBA(
 					percentToByte(r), // x% -> (x/100)*255, x -> x
 					percentToByte(g),
 					percentToByte(b),
-					percentToValue(a) * 255 // x% -> (x/100)*255, x -> x*255
+					percentToValue(a) * 255, // x% -> (x/100)*255, x -> x*255
 				),
 		},
-
 	],
 	rgba: [
 		{
@@ -484,22 +707,15 @@ const cssFuncs = {
 					percentToByte(r), // x% -> (x/100)*255, x -> x
 					percentToByte(g),
 					percentToByte(b),
-					percentToValue(a) * 255 // x% -> (x/100)*255, x -> x*255
+					percentToValue(a) * 255, // x% -> (x/100)*255, x -> x*255
 				),
 		},
 	],
 	hsl: [
 		{
-			params: [
-				validateAngle,
-				validateNumberOrPercent,
-				validateNumberOrPercent,
-			],
-			parse: ([h, s, l]) => RGBA.fromHSL(
-				stringToAngle(h),
-				percentToValue(s),
-				percentToValue(l)
-			)
+			params: [validateAngle, validateNumberOrPercent, validateNumberOrPercent],
+			parse: ([h, s, l]) =>
+				RGBA.fromHSL(stringToAngle(h), percentToValue(s), percentToValue(l)),
 		},
 		{
 			params: [
@@ -508,12 +724,13 @@ const cssFuncs = {
 				validateNumberOrPercent,
 				validateNumberOrPercent,
 			],
-			parse: ([h, s, l, a]) => RGBA.fromHSL(
-				stringToAngle(h),
-				percentToValue(s),
-				percentToValue(l),
-				percentToValue(a)
-			)
+			parse: ([h, s, l, a]) =>
+				RGBA.fromHSL(
+					stringToAngle(h),
+					percentToValue(s),
+					percentToValue(l),
+					percentToValue(a),
+				),
 		},
 	],
 
@@ -525,102 +742,216 @@ const cssFuncs = {
 				validateNumberOrPercent,
 				validateNumberOrPercent,
 			],
-			parse: ([h, s, l, a]) => RGBA.fromHSL(
-				stringToAngle(h),
-				percentToValue(s),
-				percentToValue(l),
-				percentToValue(a)
-			)
+			parse: ([h, s, l, a]) =>
+				RGBA.fromHSL(
+					stringToAngle(h),
+					percentToValue(s),
+					percentToValue(l),
+					percentToValue(a),
+				),
 		},
-	]
+	],
 } satisfies Record<string, CssFunc>;
 
 const blendNumbers = (from: number, to: number, progress: number) => {
 	return from + (to - from) * progress;
 };
 
-type ColourHelper = {
-	[K in `x${string}`]: RGBA;
-} & {
-	/**
-	 * Dynamic property: colours can be specified with `C.x<hexcode>`
-	 * @example
-	 * ```ts
-	 * const theme = {
-	 *   background: C.x222226,
-	 *   text: C.xe8e8e8,
-	 * }
-	 * ```
-	 */
-	x___: RGBA;
-	/**
-	 * Creates a colour, represented as RGBA
-	 * @param red Red (0..255)
-	 * @param green Green (0..255)
-	 * @param blue Blue (0..255)
-	 * @returns
-	 */
-	rgb: (red: number, green: number, blue: number) => RGBA;
-	/**
-	 * Creates a colour, represented as RGBA
-	 * @param red Red (0..255)
-	 * @param green Green (0..255)
-	 * @param blue Blue (0..255)
-	 * @param alpha Alpha (normalised 0..1, per CSS rgba function)
-	 * @returns
-	 */
-	rgba: (red: number, green: number, blue: number, alpha: number) => RGBA;
-};
+type ColourHelper = ((s: string) => RGBA) &
+	((red: number, green: number, blue: number, alpha?: number) => RGBA) & {
+		[K in `x${string}`]: RGBA;
+	} & {
+		/**
+		 * Dynamic property: colours can be specified with `C.x<hexcode>`
+		 * @example
+		 * ```ts
+		 * const theme = {
+		 *   background: C.x222226,
+		 *   text: C.xe8e8e8,
+		 * }
+		 * ```
+		 */
+		x___: RGBA;
+	};
+
+function fromHex(code: string) {
+	if (
+		code.length < 1 ||
+		code.length > 8 ||
+		code.length == 5 ||
+		code.length == 7 ||
+		/[^a-zA-Z\d]/.test(code)
+	)
+		throw new Error(`Invalid hex colour code '${code}'`);
+
+	if (code.length < 3) code = code + code + code; // 1 => 111, 12 => 121212
+	if (code.length <= 4) {
+		// 123 => 112233, 1234 => 11223344
+		code = code
+			.split("")
+			.map((c) => c + c)
+			.join("");
+	}
+	const red = parseInt(code[0] + code[1], 16);
+	const green = parseInt(code[2] + code[3], 16);
+	const blue = parseInt(code[4] + code[5], 16);
+	const alpha = code.length == 6 ? 255 : parseInt(code[6] + code[7], 16);
+	return new RGBA(red, green, blue, alpha);
+}
 
 /**
- * ### Experimental; use at risk
  * A shortcut helper for specifying RGBA colour representations using CSS-like syntax
+ * @example
+ * ```js
+ * let colour = C.xff0080;
+ * ```
  */
 export const C = new Proxy(
+	(s: string | number, green?: number, blue?: number, alpha?: number) =>
+		green === undefined ?
+			RGBA.parse(s as string)
+		:	new RGBA(s as number, green, blue!, alpha ?? 255),
 	{
-		rgb: (r: number, g: number, b: number) => new RGBA(r, g, b),
-		rgba: (r: number, g: number, b: number, a: number) => new RGBA(r, g, b, a),
-	},
-	{
-		get: (base, prop) => {
+		apply: (parse, _, args) => parse(args[0]),
+		get: (parse, prop) => {
 			if (typeof prop != "string") return undefined;
-			if (prop[0] == "x") return RGBA.parse("#" + prop.substring(1));
-			if (prop in base) return base[prop as keyof typeof base];
+			if (prop[0] == "x") return parse("#" + prop.substring(1));
 			throw new Error("Invalid colour");
 		},
-	}
+	},
 ) as ColourHelper;
 
-type Angle = {
-	asDegrees: number;
-} | {
-	asRadians: number;
-} | {
-	asTurns: number;
-};
+type Angle =
+	| {
+			asDegrees: number;
+	  }
+	| {
+			asRadians: number;
+	  }
+	| {
+			asTurns: number;
+	  };
 
-function angleAsDegrees(angle: Angle) {
-	if ("asDegrees" in angle) return angle.asDegrees;
-	if ("asTurns" in angle) return angle.asTurns * 360;
-	return angle.asRadians * (180 / Math.PI);
+function angleAsRadians(angle: Angle | number) {
+	if (typeof angle == "number") return angle;
+	if ("asRadians" in angle) return angle.asRadians;
+	if ("asDegrees" in angle) return angle.asDegrees * (Math.PI / 180);
+	if ("asTurns" in angle) return angle.asTurns * TAU;
+	throw new Error("Invalid angle");
 }
 
 function stringToAngle(s: string): Angle {
-	if (/^\d+$/.test(s)) return {asDegrees: Number(s)};
+	if (/^\d+$/.test(s)) return { asDegrees: Number(s) };
 	const match = s.match(/^(\d+)(deg|rad|turn)/);
 	if (match) {
 		switch (match[2]) {
-			case "deg": return {asDegrees: Number(match[1])};
-			case "rad": return {asRadians: Number(match[1])};
-			case "turn": return {asTurns: Number(match[1])};
+			case "deg":
+				return { asDegrees: Number(match[1]) };
+			case "rad":
+				return { asRadians: Number(match[1]) };
+			case "turn":
+				return { asTurns: Number(match[1]) };
 		}
 	}
-	throw new Error("Unknown unit: " + s.replace(/^\d+/, ''));
+	throw new Error("Unknown unit: " + s.replace(/^\d+/, ""));
 }
 
-export const egaPalette = [
-	C.x000, C.x00a, C.x0a0, C.x0aa, C.xa00, C.xa0a, C.xaa0, C.xaaa, C.x555, C.x55f, C.x5f5, C.x5ff, C.xf55, C.xf5f, C.xff5, C.xfff,	
-];
+/**
+ * Create an optimised color palette from a set of colors
+ * @param colors Array of source colors
+ * @param maxColors Maximum number of colors in palette
+ * @returns Optimized palette
+ */
+export function createPalette(
+	colors: RGBA[],
+	maxColors: number,
+): RGBA[] {
+	if (maxColors <= 0) throw new Error("maxColors must be positive");
+	if (colors.length === 0) return [];
+	if (maxColors >= colors.length) return [...new Set(colors)];
+	return medianCutQuantize(colors, maxColors);
+}
+
+function medianCutQuantize(colors: RGBA[], maxColors: number): RGBA[] {
+	const buckets = [colors];
+
+	while (buckets.length < maxColors && buckets.some((b) => b.length > 1)) {
+		// find widest bucket
+		const bucketIndex = buckets.reduce((maxIdx, bucket, idx) => {
+			if (bucket.length <= 1) return maxIdx;
+			const range = getColorRange(bucket);
+			const maxRange = getColorRange(buckets[maxIdx]);
+			return range > maxRange ? idx : maxIdx;
+		}, 0);
+
+		const bucket = buckets[bucketIndex];
+		if (bucket.length <= 1) break;
+
+		// sort by widest channel
+		const ranges = getChannelRanges(bucket);
+		const maxChannel =
+			ranges.red > ranges.green && ranges.red > ranges.blue ? "red"
+			: ranges.green > ranges.blue ? "green"
+			: "blue";
+
+		bucket.sort((a, b) => {
+			const aVal =
+				maxChannel === "red" ? a.redValue
+				: maxChannel === "green" ? a.greenValue
+				: a.blueValue;
+			const bVal =
+				maxChannel === "red" ? b.redValue
+				: maxChannel === "green" ? b.greenValue
+				: b.blueValue;
+			return aVal - bVal;
+		});
+
+		const mid = Math.floor(bucket.length / 2);
+		buckets.splice(bucketIndex, 1, bucket.slice(0, mid), bucket.slice(mid));
+	}
+
+	// Average each bucket
+	return buckets.map((bucket) =>
+		bucket.length === 0 ? new RGBA(0, 0, 0)
+		: bucket.length === 1 ? bucket[0]
+		: RGBA.average(bucket),
+	);
+}
+
+function getColorRange(colors: RGBA[]): number {
+	const ranges = getChannelRanges(colors);
+	return Math.max(ranges.red, ranges.green, ranges.blue);
+}
+
+function getChannelRanges(colors: RGBA[]): {
+	red: number;
+	green: number;
+	blue: number;
+} {
+	let minR = 255,
+		maxR = 0,
+		minG = 255,
+		maxG = 0,
+		minB = 255,
+		maxB = 0;
+
+	for (const color of colors) {
+		minR = Math.min(minR, color.redValue);
+		maxR = Math.max(maxR, color.redValue);
+		minG = Math.min(minG, color.greenValue);
+		maxG = Math.max(maxG, color.greenValue);
+		minB = Math.min(minB, color.blueValue);
+		maxB = Math.max(maxB, color.blueValue);
+	}
+
+	return {
+		red: maxR - minR,
+		green: maxG - minG,
+		blue: maxB - minB,
+	};
+}
+
+export const egaPalette = [C.x000, C.x00a, C.x0a0, C.x0aa, C.xa00, C.xa0a, C.xaa0, C.xaaa, C.x555, C.x55f, C.x5f5, C.x5ff, C.xf55, C.xf5f, C.xff5, C.xfff] as const;
 
 export const aliceblue = C.xf0f8ff;
 export const antiquewhite = C.xfaebd7;
