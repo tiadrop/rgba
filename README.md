@@ -2,6 +2,14 @@
 
 A class to represent colours, designed for fast read/writing canvas ImageData
 
+## Install
+
+```bash
+npm i @xtia/rgba
+```
+
+## Examples
+
 ```ts
 import { RGBA } from "@xtia/rgba";
 
@@ -48,4 +56,12 @@ import { animate } from "@xtia/timeline";
 animate(1000)
 	.tween(black, rebeccapurple)
 	.listen(c => el.style.background = c);
+
+// helper proxy
+import { C } from "@xtia/rgba";
+const colour = C.xabc123; // same as RGBA.parse("#abc123")
 ```
+
+## VSCode integration
+
+Use the [@xtia/rgba Swatches VSCode extension](https://marketplace.visualstudio.com/items?itemName=xtia.xtia-rgba-swatches) to add interactive swatches to the `C.x___` helper syntax.
