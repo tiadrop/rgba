@@ -21,20 +21,26 @@ const darkGreen = green.blend(black, .5);
 const darkBlue = RGBA.parse("#000080");
 const pink = RGBA.parse("rgb(255, 130, 200)");
 const darkPurple = darkRed.add(darkBlue);
+const yellow = green.replace({red: 255});
+const blue = yellow.inverted;
 
 // transparency:
 const translucentRed = new RGBA(255, 0, 0, 128);
 // or
 const translucentGreen = green.fade(.5);
 
-// use as hex code
+// helper proxy (C.x___)
+import { C } from "@xtia/rgba";
+const colour = C.xabc123; // same as RGBA.parse("#abc123")
+
+// use hex code
 document.body.style.backgroundColor = darkRed.hexCode;
 
 // read from canvas
 const colour = new RGBA(imageData.data.slice(idx, idx + 4));
 
 // write to canvas
-imageData.data.set(colour.data, idx);
+imageData.data.set(colour.asBytes, idx);
 
 // import named colours
 import { orangered, rebeccapurple } from "@xtia/rgba";
@@ -56,12 +62,8 @@ import { animate } from "@xtia/timeline";
 animate(1000)
 	.tween(black, rebeccapurple)
 	.listen(c => el.style.background = c);
-
-// helper proxy
-import { C } from "@xtia/rgba";
-const colour = C.xabc123; // same as RGBA.parse("#abc123")
 ```
 
-## VSCode integration
+## VS Code integration
 
-Use the [@xtia/rgba Swatches VSCode extension](https://marketplace.visualstudio.com/items?itemName=xtia.xtia-rgba-swatches) to add interactive swatches to the `C.x___` helper syntax.
+Use the [@xtia/rgba Swatches VS Code extension](https://marketplace.visualstudio.com/items?itemName=xtia.xtia-rgba-swatches) to add interactive swatches to the `C.x___` helper syntax.
