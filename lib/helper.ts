@@ -1,4 +1,4 @@
-import { RGBA } from ".";
+import { RGBA } from "./rgba";
 
 
 type ColourHelper = ((s: string) => RGBA) &

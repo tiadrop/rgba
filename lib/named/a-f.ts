@@ -1,4 +1,4 @@
-import { C } from "..";
+import { C } from "../helper";
 
 export const aliceblue = C.xf0f8ff;
 export const antiquewhite = C.xfaebd7;

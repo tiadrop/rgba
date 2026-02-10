@@ -1,4 +1,4 @@
-import { C } from "..";
+import { C } from "../helper";
 
 export const gainsboro = C.xdc;
 export const ghostwhite = C.xf8f8ff;

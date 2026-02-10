@@ -1,4 +1,4 @@
-import { RGBA } from ".";
+import { RGBA } from "./rgba";
 import { C } from "./helper";
 
 function getColourRange(colours: RGBA[]): number {
