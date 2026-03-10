@@ -50,7 +50,7 @@ import { $ } from "@xtia/jel";
 
 const el = $.div({
 	style: {
-		color: darkBlue
+		color: darkBlue,
 		border: `3px solid ${darkBlue.saturate(.5)}`
 	},
 });
@@ -61,7 +61,7 @@ import { animate } from "@xtia/timeline";
 
 animate(1000)
 	.tween(black, rebeccapurple)
-	.listen(c => el.style.background = c);
+	.apply(c => el.style.background = c);
 ```
 
 ## VS Code integration
