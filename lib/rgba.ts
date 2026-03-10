@@ -391,6 +391,7 @@ export class RGBA {
 			case "draw":
 				const selfBytes = this.asBytes;
 				const brushBytes = c.asBytes;
+				if (brushBytes[3] === 255) return c;
 				const a = brushBytes[3] / 255;
 				return new RGBA(
 					blendNumbers(selfBytes[0], brushBytes[0], a),
@@ -506,7 +507,7 @@ export class RGBA {
 	 *
 	 * Hex values may be #rgb, #rrggbb, #rgba, #rrggbbaa, #w or #ww
 	 * @param cssValue
-	 * @returns
+	 * @returns Parsed colour
 	 */
 	static parse(cssValue: string) {
 		// #<hex>

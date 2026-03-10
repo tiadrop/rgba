@@ -1,6 +1,6 @@
 {
   "name": "@xtia/rgba",
-  "version": "1.3.2",
+  "version": "1.4.0",
   "main": "lib/index.js",
   "repository": {
     "url": "https://github.com/tiadrop/rgba",
@@ -10,7 +10,12 @@
     ".": {
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
-    }
+    },
+    "./palettes": {
+      "types": "./lib/palettes.d.ts",
+      "default": "./lib/palettes.js"
+    },
+    "./lib": null
   },
   "scripts": {
     "prepublishOnly": "cp ../README.md .",
