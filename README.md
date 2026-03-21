@@ -14,12 +14,12 @@ npm i @xtia/rgba
 import { RGBA } from "@xtia/rgba";
 
 // specifying & mixing colours
-const green = RGBA.parse("#0f0");
+const green = parseRGBA("#0f0");
 const black = new RGBA(0, 0, 0);
-const darkRed = RGBA.hsl(0, 1, .25);
+const darkRed = RGBA.fromHSL(0, 1, .25);
 const darkGreen = green.blend(black, .5);
-const darkBlue = RGBA.parse("#000080");
-const pink = RGBA.parse("rgb(255, 130, 200)");
+const darkBlue = parseRGBA("#000080");
+const pink = parseRGBA("rgb(255, 130, 200)");
 const darkPurple = darkRed.add(darkBlue);
 const yellow = green.replace({red: 255});
 const blue = yellow.inverted;
@@ -31,7 +31,7 @@ const translucentGreen = green.fade(.5);
 
 // helper proxy (C.x___)
 import { C } from "@xtia/rgba";
-const colour = C.xabc123; // same as RGBA.parse("#abc123")
+const colour = C.xabc123; // same as parseRGBA("#abc123")
 
 // use hex code
 document.body.style.backgroundColor = darkRed.hexCode;
@@ -67,3 +67,25 @@ animate(1000)
 ## VS Code integration
 
 Use the [@xtia/rgba Swatches VS Code extension](https://marketplace.visualstudio.com/items?itemName=xtia.xtia-rgba-swatches) to add interactive swatches to the `C.x___` helper syntax.
+
+## Other features
+
+### Included Palettes
+
+```ts
+import { egaPalette, c64Palette, petrichor, sorbet }
+	from "@xtia/rgba/palettes";
+
+element.style.background = egaPalette[12];
+element.style.foreground = petrichor.petal;
+```
+
+### Palette Creation
+
+Create a quantised palette of desired size from a list of colours:
+
+```ts
+import { createPalette } from "@xtia/rgba";
+
+const myPalette = createPalette(colours, 8);
+```

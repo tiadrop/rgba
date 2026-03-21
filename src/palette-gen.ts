@@ -1,4 +1,4 @@
-import { RGBA } from "./rgba";
+import { RGBA } from "./rgba.js";
 
 function getColourRange(colours: RGBA[]): number {
 	const ranges = getChannelRanges(colours);

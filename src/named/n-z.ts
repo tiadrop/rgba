@@ -1,4 +1,4 @@
-import { C } from "../helper";
+import { C } from "../helper.js";
 
 export const navajowhite = C.xffdead;
 export const navy = C.x000080;

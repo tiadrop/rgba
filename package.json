@@ -1,13 +1,34 @@
 {
-  "name": "rgba",
+  "name": "@xtia/rgba",
   "version": "1.4.0",
+  "main": "lib/index.js",
   "description": "Colour representation and manipulation",
-  "main": "lib/index.ts",
   "directories": {
     "lib": "lib"
   },
+  "repository": {
+    "url": "https://github.com/tiadrop/rgba",
+    "type": "github"
+  },
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./palettes": {
+      "types": "./lib/palettes/index.d.ts",
+      "default": "./lib/palettes/index.js"
+    },
+    "./lib": null
+  },
+  "files": [
+    "lib/",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
-    "build": "npx tsc"
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "colour",
@@ -15,7 +36,7 @@
     "rgb",
     "rgba"
   ],
-  "author": "Aleta",
+  "author": "Aleta Lovelace",
   "license": "MIT",
   "devDependencies": {
     "typescript": "^5.8.2"

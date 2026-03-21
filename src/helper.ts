@@ -1,4 +1,5 @@
-import { RGBA } from "./rgba";
+import { parseHex } from "./parse-hex.js";
+import { RGBA } from "./rgba.js";
 
 
 type ColourHelper = ((s: string) => RGBA) &
@@ -26,15 +27,18 @@ type ColourHelper = ((s: string) => RGBA) &
  * ```
  */
 export const C = /*#__PURE__*/ new Proxy(
-    (s: string | number, green?: number, blue?: number, alpha?: number) =>
-        green === undefined ?
-            RGBA.parse(s as string)
-            : new RGBA(s as number, green, blue!, alpha ?? 255),
+    (s: string | number, green?: number, blue?: number, alpha?: number) => {
+		if (green === undefined) {
+			const code = s as string;
+			return parseHex(code.startsWith("#") ? code.substring(1) : code);
+		}
+        return new RGBA(s as number, green, blue!, alpha ?? 255);
+	},
     {
         apply: (parse, _, args) => parse.apply(_, args as any),
         get: (parse, prop) => {
             if (typeof prop != "string") return undefined;
-            if (prop[0] == "x") return parse("#" + prop.substring(1));
+            if (prop[0] == "x") return parse(prop.substring(1));
             throw new Error("Invalid colour");
         },
     },

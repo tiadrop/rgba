@@ -1,3 +1,5 @@
+import { parseRGBA } from "./parse-css.js";
+
 const hexLookup = new Array(256);
 for (let i = 0; i < 256; i++) {
 	hexLookup[i] = i.toString(16).padStart(2, "0");
@@ -237,8 +239,8 @@ export class RGBA {
 	 */
 	blend(target: RGBA, targetBias?: number): RGBA;
 	blend(target: string, targetBias?: number): RGBA;
-	blend(target: RGBA | string, targetBias: number = 0.5): RGBA {
-		if (typeof target == "string") target = RGBA.parse(target);
+	blend(targetArg: RGBA | string, targetBias: number = 0.5): RGBA {
+		const target = typeof targetArg == "string" ? parseRGBA(targetArg) : targetArg;
 		if (targetBias == 0) return this;
 		if (targetBias == 1) return target;
 		const [sr, sg, sb, sa] = this.asBytes;
@@ -493,11 +495,11 @@ export class RGBA {
 	 * * `#c` expands to `#cccccc` and `#cd` expands to `#cdcdcd`
 	 * @param code
 	 * @returns RGBA from hex code
-	 * @deprecated use RGBA.parse(code with # prefix)
+	 * @deprecated use parseRGBA(code with # prefix)
 	 */
 	static fromHex(code: string) {
-		if (code[0] == "#") code = code.substring(1);
-		return fromHex(code);
+		if (code[0] !== "#") code = "#" + code;
+		return parseRGBA(code);
 	}
 
 	/**
@@ -508,46 +510,10 @@ export class RGBA {
 	 * Hex values may be #rgb, #rrggbb, #rgba, #rrggbbaa, #w or #ww
 	 * @param cssValue
 	 * @returns Parsed colour
+	 * @deprecated Use `parseRGBA()`
 	 */
 	static parse(cssValue: string) {
-		// #<hex>
-		if (cssValue[0] == "#") return fromHex(cssValue.substring(1));
-		// css func?
-		const funcMatch = cssValue.match(cssFuncRegex);
-		if (!funcMatch) throw new SyntaxError("Unrecognised CSS colour string");
-		// func name match
-		const funcName = funcMatch[1] as keyof typeof cssFuncs;
-		const args = parseArgStr(funcMatch[2]);
-		if (!(funcName in cssFuncs)) throw new Error("Unknown CSS colour function");
-		const func = cssFuncs[funcName];
-
-		// find a signature with matching arg count
-		const overload = func.find((f) => {
-			const numParams = Array.isArray(f.params) ? f.params.length : f.params;
-			return numParams === args.length;
-		});
-		if (!overload)
-			throw new Error("Invalid CSS colour function argument count");
-
-		// validate args
-		for (let i = 0; i < args.length; i++) {
-			const arg = args[i];
-			const validator =
-				Array.isArray(overload.params) ?
-					overload.params[i]
-					: validateNumberOrPercent;
-			const result = validator(arg);
-			if (!result.valid) {
-				throw new Error("Invalid CSS colour argument: " + result.reason);
-			}
-		}
-		try {
-			return overload.parse(args);
-		} catch (e: any) {
-			const message =
-				typeof e == "object" && "message" in e ? e.message : `${e}`;
-			throw new Error("Failed to parse CSS colour: " + message);
-		}
+		return parseRGBA(cssValue);
 	}
 
 	/**
@@ -647,186 +613,11 @@ export class RGBA {
 }
 
 const TAU = Math.PI * 2;
-const cssFuncRegex = /^\s*(\w+)\(([^)]+)\)\s*$/;
 
-function parseArgStr(s: string) {
-	if (s.includes(",")) return s.split(",").map((s) => s.trim());
-	const [beforeSlash, afterSlash] = s.split("/", 2).map((s) => s.trim());
-	if (afterSlash) return [...beforeSlash.split(/\s+/), afterSlash];
-	return beforeSlash.split(/\s+/);
-}
-
-
-
-type CssFunc = {
-	params: ((value: string) => ArgumentValidationResult)[] | number;
-	parse: (args: string[]) => RGBA;
-}[];
-
-const validateNumberOrPercent = (v: string) => {
-	if (v[v.length - 1] == "%") {
-		return isNaN(v.replace(/%$/, "") as any) ?
-			validationResult(false, "not a number")
-			: validationResult(true);
-	}
-	return isNaN(v as any) ?
-		validationResult(false, "not a number")
-		: validationResult(true);
-};
-
-const validateAngle = (v: string) => {
-	return /^\d+(deg|rad|turn)?$/.test(v) ?
-		validationResult(true)
-		: validationResult(false, "not a valid angle");
-};
-
-type ArgumentValidationResult =
-	| {
-		valid: true;
-	}
-	| {
-		valid: false;
-		reason: string;
-	};
-
-function validationResult(valid: true): ArgumentValidationResult;
-function validationResult(
-	valid: false,
-	reason: string,
-): ArgumentValidationResult;
-function validationResult(
-	valid: boolean,
-	reason: string = "",
-): ArgumentValidationResult {
-	return { valid, reason };
-}
-
-function percentToByte(v: string) {
-	return percentToValue(v, 255);
-}
-
-function percentToValue(v: string, percentMultiplier: number = 1) {
-	if (v[v.length - 1] == "%") {
-		const num = Number(v.replace(/%$/, ""));
-		return (num / 100) * percentMultiplier;
-	}
-	return Number(v);
-}
-
-const cssFuncs = {
-	rgb: [
-		{
-			params: 3,
-			parse: ([r, g, b]) =>
-				new RGBA(percentToByte(r), percentToByte(g), percentToByte(b)),
-		},
-		{
-			// css rgb() accepts 4th alpha arg
-			params: 4,
-			parse: ([r, g, b, a]) =>
-				new RGBA(
-					percentToByte(r), // x% -> (x/100)*255, x -> x
-					percentToByte(g),
-					percentToByte(b),
-					percentToValue(a) * 255, // x% -> (x/100)*255, x -> x*255
-				),
-		},
-	],
-	rgba: [
-		{
-			params: 4,
-			parse: ([r, g, b, a]) =>
-				new RGBA(
-					percentToByte(r), // x% -> (x/100)*255, x -> x
-					percentToByte(g),
-					percentToByte(b),
-					percentToValue(a) * 255, // x% -> (x/100)*255, x -> x*255
-				),
-		},
-	],
-	hsl: [
-		{
-			params: [validateAngle, validateNumberOrPercent, validateNumberOrPercent],
-			parse: ([h, s, l]) =>
-				RGBA.fromHSL(stringToAngle(h), percentToValue(s), percentToValue(l)),
-		},
-		{
-			params: [
-				validateAngle,
-				validateNumberOrPercent,
-				validateNumberOrPercent,
-				validateNumberOrPercent,
-			],
-			parse: ([h, s, l, a]) =>
-				RGBA.fromHSL(
-					stringToAngle(h),
-					percentToValue(s),
-					percentToValue(l),
-					percentToValue(a),
-				),
-		},
-	],
-
-	hsla: [
-		{
-			params: [
-				validateAngle,
-				validateNumberOrPercent,
-				validateNumberOrPercent,
-				validateNumberOrPercent,
-			],
-			parse: ([h, s, l, a]) =>
-				RGBA.fromHSL(
-					stringToAngle(h),
-					percentToValue(s),
-					percentToValue(l),
-					percentToValue(a),
-				),
-		},
-	],
-} satisfies Record<string, CssFunc>;
 
 const blendNumbers = (from: number, to: number, progress: number) => {
 	return from + (to - from) * progress;
 };
-
-function fromHex(code: string) {
-	if (
-		code.length < 1 ||
-		code.length > 8 ||
-		code.length == 5 ||
-		code.length == 7 ||
-		/[^a-zA-Z\d]/.test(code)
-	)
-		throw new Error(`Invalid hex colour code '${code}'`);
-
-	if (code.length < 3) code = code + code + code; // 1 => 111, 12 => 121212
-	if (code.length <= 4) {
-		// 123 => 112233, 1234 => 11223344
-		code = code
-			.split("")
-			.map((c) => c + c)
-			.join("");
-	}
-	const red = parseInt(code[0] + code[1], 16);
-	const green = parseInt(code[2] + code[3], 16);
-	const blue = parseInt(code[4] + code[5], 16);
-	const alpha = code.length == 6 ? 255 : parseInt(code[6] + code[7], 16);
-	return new RGBA(red, green, blue, alpha);
-}
-
-
-type Angle =
-	| {
-		asDegrees: number;
-	}
-	| {
-		asRadians: number;
-	}
-	| {
-		asTurns: number;
-	};
-
 
 function transformChannelsFloat(
 	source: RGBA,
@@ -872,18 +663,14 @@ function angleAsRadians(angle: Angle | number) {
 	throw new Error("Invalid angle");
 }
 
-function stringToAngle(s: string): Angle {
-	if (/^\d+$/.test(s)) return { asDegrees: Number(s) };
-	const match = s.match(/^(\d+)(deg|rad|turn)/);
-	if (match) {
-		switch (match[2]) {
-			case "deg":
-				return { asDegrees: Number(match[1]) };
-			case "rad":
-				return { asRadians: Number(match[1]) };
-			case "turn":
-				return { asTurns: Number(match[1]) };
-		}
+export type Angle =
+	| {
+		asDegrees: number;
 	}
-	throw new Error("Unknown unit: " + s.replace(/^\d+/, ""));
-}
+	| {
+		asRadians: number;
+	}
+	| {
+		asTurns: number;
+	};
+
