@@ -11,7 +11,7 @@ npm i @xtia/rgba
 ## Examples
 
 ```ts
-import { RGBA } from "@xtia/rgba";
+import { RGBA, parseRGBA } from "@xtia/rgba";
 
 // specifying & mixing colours
 const green = parseRGBA("#0f0");
